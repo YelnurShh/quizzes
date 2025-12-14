@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Quiz System</title>
-  <style>
-    body {font-family: Arial; background:#f4f6f8; padding:20px}
-    .container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
-    textarea,input,button{width:100%;margin-top:10px;padding:10px}
-    button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer}
-    .question{background:#f1f5f9;padding:15px;margin-top:15px;border-radius:8px}
-    .hidden{display:none}
-  </style>
+<meta charset="UTF-8" />
+<title>Quiz System</title>
+<style>
+body {font-family: Arial; background:#f4f6f8; padding:20px}
+.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
+textarea,input,button{width:100%;margin-top:10px;padding:10px}
+button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.question{background:#f1f5f9;padding:15px;margin-top:15px;border-radius:8px}
+.hidden{display:none}
+</style>
 </head>
 <body>
 <div class="container">
@@ -24,7 +24,7 @@
 <!-- TEACHER -->
 <div id="teacher" class="hidden">
   <h2>Тест құрастыру</h2>
-  <textarea id="inputQuestions" rows="8" placeholder="Вопрос | *правильный | вариант2 | вариант3"></textarea>
+  <textarea id="inputQuestions" rows="8" placeholder="Вопрос | *правильный | вариант2 | вариант3 | вариант4 | вариант5"></textarea>
   <button onclick="createSession()">Сессия ашу</button>
   <p id="sessionInfo"></p>
 </div>
@@ -67,6 +67,10 @@ function createSession(){
   document.getElementById('sessionInfo').innerText=`Сессия коды: ${sessionCode}`;
 }
 
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
+}
+
 function loadSession(){
   sessionCode=document.getElementById('sessionCodeInput').value;
   const data=JSON.parse(localStorage.getItem(sessionCode));
@@ -79,7 +83,12 @@ function loadSession(){
     const d=document.createElement('div');
     d.className='question';
     d.innerHTML=`<b>${i+1}. ${q.q}</b><br>`;
-    q.options.forEach(o=>{
+    
+    // Дұрыс жауапты қосып, варианттарды shuffle жасау
+    let opts = q.options.concat([q.correct]);
+    opts = shuffle(opts);
+
+    opts.forEach(o=>{
       const label=document.createElement('label');
       label.style.cursor='pointer';
       label.innerHTML=`<input type=radio name=q${i} value="${o}"> ${o}`;
