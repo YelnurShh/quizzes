@@ -4,11 +4,10 @@
 <meta charset="UTF-8" />
 <title>Quiz System</title>
 <style>
-body {font-family: Arial, sans-serif; background:#f4f6f8; padding:20px;}
-.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px;box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
-textarea,input,button{width:100%;margin-top:10px;padding:10px;border-radius:6px;border:1px solid #ccc;}
-button{background:#2563eb;color:#fff;border:none;cursor:pointer;transition: background-color 0.2s;}
-button:hover{background:#1e40af;}
+body {font-family: Arial; background:#f4f6f8; padding:20px;}
+.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px;}
+textarea,input,button{width:100%;margin-top:10px;padding:10px;}
+button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;}
 .question{background:#f1f5f9;padding:15px;margin-top:15px;border-radius:8px;}
 .hidden{display:none;}
 .option-card{
@@ -20,8 +19,8 @@ button:hover{background:#1e40af;}
   transition:0.2s;
   background:#fff;
 }
-.option-card:hover{background:#e2e8f0;}
-.option-card.correct{background:#d4edda;border-color:#28a745;color:#155724;font-weight:bold;}
+.option-card:hover{background:#f0f0f0;}
+.option-card.correct{background:#d4edda;border-color:#28a745;color:#155724;}
 .option-card.wrong{background:#f8d7da;border-color:#dc3545;color:#721c24;}
 </style>
 </head>
@@ -34,162 +33,88 @@ button:hover{background:#1e40af;}
   <button onclick="setMode('student')">👨‍🎓 Студент</button>
 </div>
 
+<!-- TEACHER -->
 <div id="teacher" class="hidden">
   <h2>Тест құрастыру</h2>
-  <textarea id="inputQuestions" rows="8" placeholder="Сұрақ | *дұрыс жауап | вариант2 | вариант3 | вариант4 | вариант5"></textarea>
+  <textarea id="inputQuestions" rows="8" placeholder="Вопрос | *правильный | вариант2 | вариант3 | вариант4 | вариант5"></textarea>
   <button onclick="createSession()">Сессия ашу</button>
-  <p id="sessionInfo" style="margin-top: 15px; font-weight: bold; color: #2563eb;"></p>
+  <p id="sessionInfo"></p>
 </div>
 
+<!-- STUDENT -->
 <div id="student" class="hidden">
   <h2>Тестке кіру</h2>
   <input id="sessionCodeInput" placeholder="Сессия кодын енгіз">
-  <input id="studentName" placeholder="Аты-жөніңіз">
+  <input id="studentName" placeholder="Атың">
   <button onclick="loadSession()">Бастау</button>
-  
-  <div id="quiz" style="margin-top: 20px;"></div>
-  
-  <div id="finishContainer" class="hidden">
-    <button onclick="finishTest()">Аяқтау</button>
-  </div>
-
-  <div id="result" style="margin-top: 20px; font-weight: bold;"></div>
+  <div id="quiz"></div>
+  <button onclick="finishTest()">Аяқтау</button>
+  <div id="result"></div>
 </div>
 </div>
 
 <script>
-let mode = '';
-let quizData = [];
+let mode='';
+let quizData=[];
 let startTime;
-let sessionCode = '';
-let studentMode = false;
+let sessionCode='';
 
 function setMode(m){
-  mode = m;
+  mode=m;
   document.getElementById('modeSelect').classList.add('hidden');
   document.getElementById(m).classList.remove('hidden');
-  if (m === 'student') {
-    studentMode = true;
-  }
-}
-
-function shuffle(array) {
-  // Fisher-Yates shuffle алгоритмі
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
 }
 
 function createSession(){
-  const input = document.getElementById('inputQuestions').value.trim();
-  if (!input) {
-      alert('Сұрақтарды енгізіңіз!');
-      return;
-  }
-  const lines = input.split('\n').filter(line => line.trim() !== ''); // Бос жолдарды сүзу
-  quizData = [];
-  
-  lines.forEach(line => {
-    const parts = line.split('|').map(p => p.trim());
-    if (parts.length < 2) return; // Минималды сұрақ + 1 опция
-
-    const questionText = parts[0];
-    const allOptionsWithStar = parts.slice(1);
-
-    // 1. Дұрыс жауапты табамыз
-    const correctOptionWithStar = allOptionsWithStar.find(p => p.startsWith('*'));
-    if (!correctOptionWithStar) return; // Дұрыс жауап табылмаса, өткізіп жіберу
-
-    const correct = correctOptionWithStar.replace('*', '').trim();
-
-    // 2. Дұрыс емес опцияларды табамыз
-    const wrongOptions = allOptionsWithStar
-        .filter(p => p.trim() !== correctOptionWithStar) // *бар дұрыс жауапты алып тастау
-        .map(p => p.replace('*', '').trim()) // қалған * белгілерін алып тастау
-        .filter(p => p !== ''); // бос жолдарды алып тастау
-
-    // 3. Дұрыс жауапты дұрыс емес опциялар тізімінде қайталануын тексереміз және алып тастаймыз
-    const uniqueWrongOptions = wrongOptions.filter(o => o !== correct);
-    
-    quizData.push({ q: questionText, options: uniqueWrongOptions, correct: correct });
+  const lines=document.getElementById('inputQuestions').value.trim().split('\n');
+  quizData=[];
+  lines.forEach(line=>{
+    const parts=line.split('|').map(p=>p.trim());
+    const correct=parts.find(p=>p.startsWith('*')).replace('*','');
+    const options=parts.slice(1).map(p=>p.replace('*','')).filter(o => o !== correct);
+    quizData.push({q:parts[0],options,correct});
   });
+  sessionCode=Math.random().toString(36).substring(2,7).toUpperCase();
+  localStorage.setItem(sessionCode,JSON.stringify({quizData,results:[]}));
+  document.getElementById('sessionInfo').innerText=`Сессия коды: ${sessionCode}`;
+}
 
-  if (quizData.length === 0) {
-      alert('Сұрақтар дұрыс форматта енгізілмеген. Әр жол: "Сұрақ | *Дұрыс Жауап | Қате Жауап 1 | ..."');
-      return;
-  }
-
-  sessionCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-  localStorage.setItem(sessionCode, JSON.stringify({ quizData, results: [] }));
-  document.getElementById('sessionInfo').innerText = `✅ Сессия сәтті ашылды. Коды: ${sessionCode}`;
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
 }
 
 function loadSession(){
-  sessionCode = document.getElementById('sessionCodeInput').value.trim();
-  const studentName = document.getElementById('studentName').value.trim();
-
-  if (!sessionCode || !studentName) {
-      alert('Сессия кодын және аты-жөніңізді енгізіңіз.');
-      return;
-  }
-
-  const data = JSON.parse(localStorage.getItem(sessionCode));
-  if(!data){
-      alert(`Сессия коды («${sessionCode}») табылмады немесе дұрыс емес.`);
-      return;
-  }
-  
-  quizData = data.quizData;
-  startTime = Date.now();
-  
-  // Интерфейсті жаңарту
-  document.getElementById('sessionCodeInput').classList.add('hidden');
-  document.getElementById('studentName').classList.add('hidden');
-  document.querySelector('#student button').classList.add('hidden'); // 'Бастау' батырмасын жасыру
-  document.getElementById('finishContainer').classList.remove('hidden');
-
-  const quizDiv = document.getElementById('quiz');
-  quizDiv.innerHTML = '';
-  
-  quizData.forEach((q, i) => {
-    const d = document.createElement('div');
-    d.className = 'question';
-    d.dataset.questionIndex = i; // Сұрақ индексін сақтау үшін
-    d.innerHTML = `<b>${i+1}. ${q.q}</b><br>`;
+  sessionCode=document.getElementById('sessionCodeInput').value;
+  const data=JSON.parse(localStorage.getItem(sessionCode));
+  if(!data){alert('Сессия табылмады');return}
+  quizData=data.quizData;
+  startTime=Date.now();
+  const quizDiv=document.getElementById('quiz');
+  quizDiv.innerHTML='';
+  quizData.forEach((q,i)=>{
+    const d=document.createElement('div');
+    d.className='question';
+    d.innerHTML=`<b>${i+1}. ${q.q}</b><br>`;
     
-    // Опцияларды жинау (дұрыс жауап + дұрыс емес жауаптар) және араластыру
-    let opts = shuffle([q.correct, ...q.options]);
+    let opts = [...q.options]; // қате варианттар
+if(!opts.includes(q.correct)) opts.push(q.correct); // дұрыс жауапты қосу, егер жоқ болса
+opts = shuffle(opts);
 
-    opts.forEach(o => {
-      const div = document.createElement('div');
-      div.className = 'option-card';
-      div.innerText = o;
-      div.onclick = function() {
-        // Егер бұл сұраққа жауап берілген болса, қайта басуға тыйым салу
-        if (d.querySelector('.option-card.correct') || d.querySelector('.option-card.wrong')) return; 
 
-        // Жауапты тексеру
-        const isCorrect = (o === q.correct);
-        
-        // Барлық опциялардың күйін көрсету (бір рет басқаннан кейін)
-        const siblings = d.querySelectorAll('.option-card');
-        siblings.forEach(s => {
-          if (s.innerText === q.correct) {
-            s.classList.add('correct');
-          } else {
-            s.classList.add('wrong');
-          }
-          // Дұрыс емес таңдауға арналған арнайы белгі
-          if (s === div && !isCorrect) {
-              s.classList.remove('wrong');
-              s.classList.add('wrong'); // Дұрыс емес жауапты қызылмен белгілеу
-          }
+    opts.forEach(o=>{
+      const div=document.createElement('div');
+      div.className='option-card';
+      div.innerText=o;
+      div.onclick=()=>{
+        if(div.classList.contains('correct') || div.classList.contains('wrong')) return; // бір рет басқанда ғана
+        if(o===q.correct) div.classList.add('correct');
+        else div.classList.add('wrong');
+        // басқа барлық опцияны көрсету
+        const siblings=div.parentNode.querySelectorAll('.option-card');
+        siblings.forEach(s=>{
+          if(s.innerText===q.correct) s.classList.add('correct');
+          if(s!==div && s.innerText!==q.correct) s.classList.add('wrong');
         });
-        
-        // Таңдалған жауапты сақтау (тексеру үшін)
-        d.dataset.selectedAnswer = o;
       }
       d.appendChild(div);
     });
@@ -199,55 +124,20 @@ function loadSession(){
 }
 
 function finishTest(){
-  let score = 0;
-  let wrongQuestions = [];
-  const quizDiv = document.getElementById('quiz');
-  
-  quizData.forEach((q, i) => {
-    const questionElement = quizDiv.querySelector(`.question[data-question-index="${i}"]`);
-    
-    // Жауап берілгенін және ол дұрыс екенін тексеру
-    const selectedAnswer = questionElement.dataset.selectedAnswer;
-
-    if (selectedAnswer && selectedAnswer === q.correct) {
-      score++;
-    } else {
-      wrongQuestions.push({
-          question: q.q,
-          correct: q.correct,
-          selected: selectedAnswer || 'Жауап берілмеген'
-      });
-    }
+  let score=0;
+  let wrong=[];
+  quizData.forEach((q,i)=>{
+    const sel=document.querySelector(`.question:nth-child(${i+1}) .option-card.correct`);
+    if(sel) score++;
+    else wrong.push(q.q);
   });
-
-  const time = Math.floor((Date.now() - startTime) / 1000);
-  const name = document.getElementById('studentName').value;
-  const data = JSON.parse(localStorage.getItem(sessionCode));
-  
-  // Нәтижені сақтау
-  data.results.push({ name, score, total: quizData.length, time, wrong: wrongQuestions.map(w => w.question) });
-  localStorage.setItem(sessionCode, JSON.stringify(data));
-  
-  const percent = Math.round((score / quizData.length) * 100);
-  
-  let resultHtml = `<h2>НӘТИЖЕ</h2>`;
-  resultHtml += `<p><strong>Аты-жөні:</strong> ${name}</p>`;
-  resultHtml += `<p><strong>Дұрыс жауаптар:</strong> ${score} / ${quizData.length} (${percent}%)</p>`;
-  resultHtml += `<p><strong>Уақыты:</strong> ${time} секунд</p>`;
-  
-  if (wrongQuestions.length > 0) {
-      resultHtml += `<p style="color: #dc3545; font-weight: bold;">Қате сұрақтар (${wrongQuestions.length}):</p>`;
-      wrongQuestions.forEach(w => {
-          resultHtml += `<div style="margin-top: 10px; padding: 10px; border: 1px dashed #dc3545;">`;
-          resultHtml += `<strong>Сұрақ:</strong> ${w.question}<br>`;
-          resultHtml += `Дұрыс жауап: ${w.correct}<br>`;
-          resultHtml += `Сіз таңдаған: ${w.selected}`;
-          resultHtml += `</div>`;
-      });
-  }
-
-  document.getElementById('result').innerHTML = resultHtml;
-  document.getElementById('finishContainer').classList.add('hidden');
+  const time=Math.floor((Date.now()-startTime)/1000);
+  const name=document.getElementById('studentName').value;
+  const data=JSON.parse(localStorage.getItem(sessionCode));
+  data.results.push({name,score,time,wrong});
+  localStorage.setItem(sessionCode,JSON.stringify(data));
+  const percent=Math.round((score/quizData.length)*100);
+  document.getElementById('result').innerText=`Нәтиже: ${score}/${quizData.length} (${percent}%), Уақыт: ${time} сек`;
 }
 </script>
 </body>
