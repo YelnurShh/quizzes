@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Quiz System</title>
+  <style>
+    body {font-family: Arial; background:#f4f6f8; padding:20px}
+    .container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
+    textarea,input,button{width:100%;margin-top:10px;padding:10px}
+    button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer}
+    .question{background:#f1f5f9;padding:15px;margin-top:15px;border-radius:8px}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+<div class="container">
+<h1>🧠 Quiz System</h1>
+
+<div id="modeSelect">
+  <button onclick="setMode('teacher')">👨‍🏫 Мұғалім</button>
+  <button onclick="setMode('student')">👨‍🎓 Студент</button>
+</div>
+
+<!-- TEACHER -->
+<div id="teacher" class="hidden">
+  <h2>Тест құрастыру</h2>
+  <textarea id="inputQuestions" rows="8" placeholder="Вопрос | *правильный | вариант2 | вариант3"></textarea>
+  <button onclick="createSession()">Сессия ашу</button>
+  <p id="sessionInfo"></p>
+</div>
+
+<!-- STUDENT -->
+<div id="student" class="hidden">
+  <h2>Тестке кіру</h2>
+  <input id="sessionCodeInput" placeholder="Сессия кодын енгіз">
+  <input id="studentName" placeholder="Атың">
+  <button onclick="loadSession()">Бастау</button>
+  <div id="quiz"></div>
+  <button onclick="finishTest()">Аяқтау</button>
+  <div id="result"></div>
+</div>
+</div>
+
+<script>
+let mode='';
+let quizData=[];
+let startTime;
+let sessionCode='';
+
+function setMode(m){
+  mode=m;
+  document.getElementById('modeSelect').classList.add('hidden');
+  document.getElementById(m).classList.remove('hidden');
+}
+
+function createSession(){
+  const lines=document.getElementById('inputQuestions').value.trim().split('\n');
+  quizData=[];
+  lines.forEach(line=>{
+    const parts=line.split('|').map(p=>p.trim());
+    const correct=parts.find(p=>p.startsWith('*')).replace('*','');
+    const options=parts.slice(1).map(p=>p.replace('*',''));
+    quizData.push({q:parts[0],options,correct});
+  });
+  sessionCode=Math.random().toString(36).substring(2,7).toUpperCase();
+  localStorage.setItem(sessionCode,JSON.stringify({quizData,results:[]}));
+  document.getElementById('sessionInfo').innerText=`Сессия коды: ${sessionCode}`;
+}
+
+function loadSession(){
+  sessionCode=document.getElementById('sessionCodeInput').value;
+  const data=JSON.parse(localStorage.getItem(sessionCode));
+  if(!data){alert('Сессия табылмады');return}
+  quizData=data.quizData;
+  startTime=Date.now();
+  const quizDiv=document.getElementById('quiz');
+  quizDiv.innerHTML='';
+  quizData.forEach((q,i)=>{
+    const d=document.createElement('div');
+    d.className='question';
+    d.innerHTML=`<b>${i+1}. ${q.q}</b><br>`;
+    q.options.forEach(o=>{
+      const label=document.createElement('label');
+      label.style.cursor='pointer';
+      label.innerHTML=`<input type=radio name=q${i} value="${o}"> ${o}`;
+      const input=label.querySelector('input');
+      input.addEventListener('change',()=>{
+        const labels=d.querySelectorAll('label');
+        labels.forEach(l=>{l.style.color='black'; l.querySelector('span')?.remove();});
+        if(o===q.correct){
+          label.style.color='green';
+          label.innerHTML+='<span> ✅ Дұрыс</span>';
+        } else {
+          label.style.color='red';
+          label.innerHTML+='<span> ❌ Қате</span>';
+        }
+      });
+      d.appendChild(label);
+      d.appendChild(document.createElement('br'));
+    });
+    quizDiv.appendChild(d);
+  });
+}
+
+function finishTest(){
+  let score=0;
+  let wrong=[];
+  quizData.forEach((q,i)=>{
+    const sel=document.querySelector(`input[name=q${i}]:checked`);
+    if(sel&&sel.value===q.correct) score++;
+    else wrong.push(q.q);
+  });
+  const time=Math.floor((Date.now()-startTime)/1000);
+  const name=document.getElementById('studentName').value;
+  const data=JSON.parse(localStorage.getItem(sessionCode));
+  data.results.push({name,score,time,wrong});
+  localStorage.setItem(sessionCode,JSON.stringify(data));
+  const percent=Math.round((score/quizData.length)*100);
+  document.getElementById('result').innerText=`Нәтиже: ${score}/${quizData.length} (${percent}%), Уақыт: ${time} сек`;
+}
+</script>
+</body>
+</html>
