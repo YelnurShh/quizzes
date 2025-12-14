@@ -1,85 +1,69 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<title>Quiz System</title>
+<meta charset="UTF-8">
+<title>Smart Quiz</title>
 
 <style>
 body{
-  font-family: 'Segoe UI', Arial, sans-serif;
-  background: linear-gradient(120deg,#e0e7ff,#f8fafc);
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:linear-gradient(120deg,#e0e7ff,#f8fafc);
   padding:20px;
 }
 
 .container{
-  max-width:900px;
+  max-width:800px;
   margin:auto;
-  background:#ffffff;
+  background:#fff;
   padding:25px;
-  border-radius:14px;
-  box-shadow:0 20px 40px rgba(0,0,0,0.08);
+  border-radius:16px;
+  box-shadow:0 20px 40px rgba(0,0,0,.1);
 }
 
-h1,h2{text-align:center;}
+h1{text-align:center;}
 
-textarea,input{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:8px;
-  border:1px solid #cbd5e1;
-  font-size:15px;
+.top-bar{
+  display:flex;
+  justify-content:space-between;
+  font-weight:600;
+  margin-bottom:20px;
 }
 
-button{
-  width:100%;
-  padding:12px;
-  margin-top:12px;
-  border:none;
-  border-radius:10px;
-  background:#2563eb;
-  color:#fff;
-  font-size:16px;
-  cursor:pointer;
-  transition:0.3s;
-}
-
-button:hover{background:#1e40af;}
-
-.question{
+.question-box{
   background:#f1f5f9;
-  padding:18px;
-  margin-top:18px;
+  padding:20px;
+  border-radius:14px;
+  margin-bottom:20px;
+}
+
+.options{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.option{
+  flex:1;
+  min-width:120px;
+  padding:14px;
+  text-align:center;
   border-radius:12px;
-}
-
-.option-card{
-  background:#ffffff;
-  border:2px solid #e2e8f0;
-  padding:12px 16px;
-  margin:10px 0;
-  border-radius:10px;
   cursor:pointer;
-  transition:0.2s;
+  border:2px solid #e2e8f0;
+  transition:.2s;
 }
 
-.option-card:hover{
-  transform:scale(1.01);
+.option:hover{
   background:#f8fafc;
 }
 
-.option-card.selected{
-  border-color:#2563eb;
-  background:#e0e7ff;
-}
-
-.option-card.correct{
+.option.correct{
   background:#dcfce7;
   border-color:#22c55e;
   color:#14532d;
 }
 
-.option-card.wrong{
+.option.wrong{
   background:#fee2e2;
   border-color:#ef4444;
   color:#7f1d1d;
@@ -87,13 +71,10 @@ button:hover{background:#1e40af;}
 
 .hidden{display:none;}
 
-.result-box{
-  background:#f8fafc;
-  padding:20px;
-  margin-top:20px;
-  border-radius:12px;
-  font-size:18px;
+.result{
   text-align:center;
+  font-size:18px;
+  margin-top:20px;
 }
 </style>
 </head>
@@ -101,128 +82,110 @@ button:hover{background:#1e40af;}
 <body>
 <div class="container">
 
-<h1>🧠 Quiz System</h1>
+<h1>🧠 Smart Quiz</h1>
 
-<div id="modeSelect">
-  <button onclick="setMode('teacher')">👨‍🏫 Мұғалім</button>
-  <button onclick="setMode('student')">👨‍🎓 Студент</button>
+<div id="teacher">
+<textarea id="input" rows="6"
+placeholder="Сұрақ | *дұрыс | вариант2 | вариант3 | вариант4"></textarea>
+<button onclick="startQuiz()">▶ Бастау</button>
 </div>
 
-<!-- TEACHER -->
-<div id="teacher" class="hidden">
-  <h2>Тест құрастыру</h2>
-  <textarea id="inputQuestions" rows="8"
-  placeholder="Вопрос | *дұрыс жауап | вариант2 | вариант3 | вариант4"></textarea>
-  <button onclick="createSession()">Сессия ашу</button>
-  <p id="sessionInfo" style="text-align:center;font-weight:bold;"></p>
+<div id="quiz" class="hidden">
+  <div class="top-bar">
+    <div id="counter"></div>
+    <div id="timer"></div>
+  </div>
+
+  <div class="question-box" id="question"></div>
+  <div class="options" id="options"></div>
 </div>
 
-<!-- STUDENT -->
-<div id="student" class="hidden">
-  <h2>Тестке кіру</h2>
-  <input id="sessionCodeInput" placeholder="Сессия кодын енгіз">
-  <input id="studentName" placeholder="Атың">
-  <button onclick="loadSession()">Бастау</button>
-
-  <div id="quiz"></div>
-
-  <button onclick="finishTest()">Аяқтау</button>
-  <div id="result"></div>
-</div>
+<div id="result" class="result hidden"></div>
 
 </div>
 
 <script>
-let quizData=[];
+let quiz=[];
+let index=0;
+let score=0;
 let startTime;
-let sessionCode='';
 
-function setMode(m){
-  document.getElementById('modeSelect').classList.add('hidden');
-  document.getElementById(m).classList.remove('hidden');
-}
-
-function createSession(){
-  const lines=document.getElementById('inputQuestions').value.trim().split('\n');
-  quizData=[];
-  lines.forEach(line=>{
-    const parts=line.split('|').map(p=>p.trim());
-    const correct=parts.find(p=>p.startsWith('*')).replace('*','');
-    const options=parts.slice(1).map(p=>p.replace('*',''));
-    quizData.push({q:parts[0],options,correct});
+function startQuiz(){
+  const lines=document.getElementById('input').value.trim().split('\n');
+  quiz=lines.map(l=>{
+    const p=l.split('|').map(x=>x.trim());
+    return{
+      q:p[0],
+      correct:p.find(x=>x.startsWith('*')).replace('*',''),
+      options:p.slice(1).map(x=>x.replace('*',''))
+    }
   });
 
-  sessionCode=Math.random().toString(36).substring(2,7).toUpperCase();
-  localStorage.setItem(sessionCode,JSON.stringify({quizData,results:[]}));
-  document.getElementById('sessionInfo').innerText=`Сессия коды: ${sessionCode}`;
-}
-
-function shuffle(arr){
-  return arr.sort(()=>Math.random()-0.5);
-}
-
-function loadSession(){
-  sessionCode=document.getElementById('sessionCodeInput').value;
-  const data=JSON.parse(localStorage.getItem(sessionCode));
-  if(!data){alert('Сессия табылмады');return;}
-
-  quizData=shuffle([...data.quizData]);
+  index=0;
+  score=0;
   startTime=Date.now();
 
-  const quiz=document.getElementById('quiz');
-  quiz.innerHTML='';
+  document.getElementById('teacher').classList.add('hidden');
+  document.getElementById('quiz').classList.remove('hidden');
+  showQuestion();
+}
 
-  quizData.forEach((q,i)=>{
-    q.selected=null;
-    const div=document.createElement('div');
-    div.className='question';
-    div.innerHTML=`<b>${i+1}. ${q.q}</b>`;
+function showQuestion(){
+  document.getElementById('counter').innerText=
+    `Сұрақ ${index+1} / ${quiz.length}`;
 
-    let opts=shuffle([...q.options]);
-    opts.forEach(o=>{
-      const card=document.createElement('div');
-      card.className='option-card';
-      card.innerText=o;
+  document.getElementById('timer').innerText=
+    `⏱ ${Math.floor((Date.now()-startTime)/1000)} c`;
 
-      card.onclick=()=>{
-        if(q.selected!==null) return;
-        q.selected=o;
+  const q=quiz[index];
+  document.getElementById('question').innerHTML=`<b>${q.q}</b>`;
 
-        const cards=div.querySelectorAll('.option-card');
-        cards.forEach(c=>c.classList.remove('selected'));
+  const opts=[...q.options].sort(()=>Math.random()-0.5);
+  const box=document.getElementById('options');
+  box.innerHTML='';
 
-        card.classList.add('selected');
-      };
-
-      div.appendChild(card);
-    });
-
-    quiz.appendChild(div);
+  opts.forEach(o=>{
+    const d=document.createElement('div');
+    d.className='option';
+    d.innerText=o;
+    d.onclick=()=>selectAnswer(d,o);
+    box.appendChild(d);
   });
 }
 
-function finishTest(){
-  let score=0;
+function selectAnswer(div,answer){
+  const q=quiz[index];
+  const options=document.querySelectorAll('.option');
 
-  quizData.forEach((q,i)=>{
-    const cards=document.querySelectorAll(`.question:nth-child(${i+1}) .option-card`);
-    cards.forEach(c=>{
-      if(c.innerText===q.correct) c.classList.add('correct');
-      if(q.selected!==q.correct && c.innerText===q.selected) c.classList.add('wrong');
-    });
-
-    if(q.selected===q.correct) score++;
+  options.forEach(o=>{
+    o.onclick=null;
+    if(o.innerText===q.correct) o.classList.add('correct');
   });
 
-  const time=Math.floor((Date.now()-startTime)/1000);
-  const percent=Math.round((score/quizData.length)*100);
+  if(answer===q.correct){
+    div.classList.add('correct');
+    score++;
+  }else{
+    div.classList.add('wrong');
+  }
 
+  setTimeout(()=>{
+    index++;
+    if(index<quiz.length) showQuestion();
+    else finishQuiz();
+  },1000);
+}
+
+function finishQuiz(){
+  document.getElementById('quiz').classList.add('hidden');
+  const time=Math.floor((Date.now()-startTime)/1000);
+  const percent=Math.round(score/quiz.length*100);
+
+  document.getElementById('result').classList.remove('hidden');
   document.getElementById('result').innerHTML=
-    `<div class="result-box">
-      ✅ Дұрыс жауап: <b>${score}</b> / ${quizData.length}<br>
-      📊 Пайыз: <b>${percent}%</b><br>
-      ⏱ Уақыт: <b>${time} сек</b>
-    </div>`;
+    `✅ Дұрыс: <b>${score}</b> / ${quiz.length}<br>
+     📊 Пайыз: <b>${percent}%</b><br>
+     ⏱ Уақыт: <b>${time} сек</b>`;
 }
 </script>
 
