@@ -4,12 +4,24 @@
 <meta charset="UTF-8" />
 <title>Quiz System</title>
 <style>
-body {font-family: Arial; background:#f4f6f8; padding:20px}
-.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
-textarea,input,button{width:100%;margin-top:10px;padding:10px}
-button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer}
-.question{background:#f1f5f9;padding:15px;margin-top:15px;border-radius:8px}
-.hidden{display:none}
+body {font-family: Arial; background:#f4f6f8; padding:20px;}
+.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px;}
+textarea,input,button{width:100%;margin-top:10px;padding:10px;}
+button{background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.question{background:#f1f5f9;padding:15px;margin-top:15px;border-radius:8px;}
+.hidden{display:none;}
+.option-card{
+  border:1px solid #ccc;
+  padding:10px 15px;
+  margin:8px 0;
+  border-radius:6px;
+  cursor:pointer;
+  transition:0.2s;
+  background:#fff;
+}
+.option-card:hover{background:#f0f0f0;}
+.option-card.correct{background:#d4edda;border-color:#28a745;color:#155724;}
+.option-card.wrong{background:#f8d7da;border-color:#dc3545;color:#721c24;}
 </style>
 </head>
 <body>
@@ -59,7 +71,7 @@ function createSession(){
   lines.forEach(line=>{
     const parts=line.split('|').map(p=>p.trim());
     const correct=parts.find(p=>p.startsWith('*')).replace('*','');
-    const options=parts.slice(1).map(p=>p.replace('*',''));
+    const options=parts.slice(1).map(p=>p.replace('*','')).filter(o => o !== correct);
     quizData.push({q:parts[0],options,correct});
   });
   sessionCode=Math.random().toString(36).substring(2,7).toUpperCase();
@@ -84,29 +96,26 @@ function loadSession(){
     d.className='question';
     d.innerHTML=`<b>${i+1}. ${q.q}</b><br>`;
     
-    // Дұрыс жауапты қосып, варианттарды shuffle жасау
-    let opts = q.options.concat([q.correct]);
-    opts = shuffle(opts);
+    let opts = shuffle([q.correct, ...q.options]); // дұрыс жауапты қосып shuffle жасау
 
     opts.forEach(o=>{
-      const label=document.createElement('label');
-      label.style.cursor='pointer';
-      label.innerHTML=`<input type=radio name=q${i} value="${o}"> ${o}`;
-      const input=label.querySelector('input');
-      input.addEventListener('change',()=>{
-        const labels=d.querySelectorAll('label');
-        labels.forEach(l=>{l.style.color='black'; l.querySelector('span')?.remove();});
-        if(o===q.correct){
-          label.style.color='green';
-          label.innerHTML+='<span> ✅ Дұрыс</span>';
-        } else {
-          label.style.color='red';
-          label.innerHTML+='<span> ❌ Қате</span>';
-        }
-      });
-      d.appendChild(label);
-      d.appendChild(document.createElement('br'));
+      const div=document.createElement('div');
+      div.className='option-card';
+      div.innerText=o;
+      div.onclick=()=>{
+        if(div.classList.contains('correct') || div.classList.contains('wrong')) return; // бір рет басқанда ғана
+        if(o===q.correct) div.classList.add('correct');
+        else div.classList.add('wrong');
+        // басқа барлық опцияны көрсету
+        const siblings=div.parentNode.querySelectorAll('.option-card');
+        siblings.forEach(s=>{
+          if(s.innerText===q.correct) s.classList.add('correct');
+          if(s!==div && s.innerText!==q.correct) s.classList.add('wrong');
+        });
+      }
+      d.appendChild(div);
     });
+
     quizDiv.appendChild(d);
   });
 }
@@ -115,8 +124,8 @@ function finishTest(){
   let score=0;
   let wrong=[];
   quizData.forEach((q,i)=>{
-    const sel=document.querySelector(`input[name=q${i}]:checked`);
-    if(sel&&sel.value===q.correct) score++;
+    const sel=document.querySelector(`.question:nth-child(${i+1}) .option-card.correct`);
+    if(sel) score++;
     else wrong.push(q.q);
   });
   const time=Math.floor((Date.now()-startTime)/1000);
