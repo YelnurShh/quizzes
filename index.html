@@ -84,36 +84,38 @@ function shuffle(array) {
 }
 
 function loadSession(){
-  sessionCode=document.getElementById('sessionCodeInput').value;
-  const data=JSON.parse(localStorage.getItem(sessionCode));
-  if(!data){alert('Сессия табылмады');return}
-  quizData=data.quizData;
-  startTime=Date.now();
-  const quizDiv=document.getElementById('quiz');
-  quizDiv.innerHTML='';
-  quizData.forEach((q,i)=>{
-    const d=document.createElement('div');
-    d.className='question';
-    d.innerHTML=`<b>${i+1}. ${q.q}</b><br>`;
+  sessionCode = document.getElementById('sessionCodeInput').value;
+  const data = JSON.parse(localStorage.getItem(sessionCode));
+  if(!data){alert('Сессия табылмады'); return;}
+  
+  quizData = shuffle([...data.quizData]); // <-- сұрақтарды кездейсоқ ету
+  startTime = Date.now();
+  
+  const quizDiv = document.getElementById('quiz');
+  quizDiv.innerHTML = '';
+  
+  quizData.forEach((q, i) => {
+    const d = document.createElement('div');
+    d.className = 'question';
+    d.innerHTML = `<b>${i+1}. ${q.q}</b><br>`;
     
-    let opts = [...q.options]; // қате варианттар
-if(!opts.includes(q.correct)) opts.push(q.correct); // дұрыс жауапты қосу, егер жоқ болса
-opts = shuffle(opts);
+    let opts = [...q.options];
+    if(!opts.includes(q.correct)) opts.push(q.correct);
+    opts = shuffle(opts); // жауаптарды кездейсоқ ету
 
-
-    opts.forEach(o=>{
-      const div=document.createElement('div');
-      div.className='option-card';
-      div.innerText=o;
-      div.onclick=()=>{
-        if(div.classList.contains('correct') || div.classList.contains('wrong')) return; // бір рет басқанда ғана
-        if(o===q.correct) div.classList.add('correct');
+    opts.forEach(o => {
+      const div = document.createElement('div');
+      div.className = 'option-card';
+      div.innerText = o;
+      div.onclick = () => {
+        if(div.classList.contains('correct') || div.classList.contains('wrong')) return;
+        if(o === q.correct) div.classList.add('correct');
         else div.classList.add('wrong');
-        // басқа барлық опцияны көрсету
-        const siblings=div.parentNode.querySelectorAll('.option-card');
-        siblings.forEach(s=>{
-          if(s.innerText===q.correct) s.classList.add('correct');
-          if(s!==div && s.innerText!==q.correct) s.classList.add('wrong');
+
+        const siblings = div.parentNode.querySelectorAll('.option-card');
+        siblings.forEach(s => {
+          if(s.innerText === q.correct) s.classList.add('correct');
+          if(s !== div && s.innerText !== q.correct) s.classList.add('wrong');
         });
       }
       d.appendChild(div);
@@ -122,6 +124,7 @@ opts = shuffle(opts);
     quizDiv.appendChild(d);
   });
 }
+
 
 function finishTest(){
   let score=0;
